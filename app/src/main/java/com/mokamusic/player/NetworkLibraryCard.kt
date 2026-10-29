@@ -25,10 +25,13 @@ import androidx.compose.ui.unit.dp
 import com.mokamusic.player.network.NetworkAlbum
 import com.mokamusic.player.network.NetworkSong
 import com.mokamusic.player.network.NetworkStreamQuality
+import com.mokamusic.player.network.PrivateVpnNetworkGate
+import com.mokamusic.player.network.PrivateVpnServerRules
 import com.mokamusic.player.network.SubsonicLibraryClient
 import com.mokamusic.player.network.SubsonicHttpException
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.net.HttpURLConnection
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +48,7 @@ internal class NetworkLibraryState(
     context: Context,
     private val appScope: kotlinx.coroutines.CoroutineScope
 ) {
+    private val appContext = context.applicationContext
     private val prefs = context.applicationContext
         .getSharedPreferences("moka_network_library", Context.MODE_PRIVATE)
 
@@ -128,10 +132,15 @@ internal class NetworkLibraryState(
             429 -> "Navidrome is rate-limiting requests (HTTP 429)."
             else -> "Navidrome returned HTTP ${e.statusCode}."
         }
-        is SocketTimeoutException -> "Navidrome timed out; check Tailscale and server load."
+        is SocketTimeoutException -> if (PrivateVpnServerRules.isPrivateWireGuard(server))
+            "Private Navidrome timed out; check Wonhee VPN and Fedora forwarding."
+            else "Navidrome timed out; check Tailscale and server load."
         is UnknownHostException -> "Can't resolve the server hostname; check Tailscale or DNS."
         is SSLException -> "HTTPS certificate/connection error."
-        is IOException -> "Network connection failed; check Wi-Fi, cellular or Tailscale."
+        is IOException -> if (PrivateVpnServerRules.isPrivateWireGuard(server))
+            "Wonhee VPN route to 10.77.0.1 is unavailable; no direct fallback was used."
+            else "Network connection failed; check Wi-Fi, cellular or Tailscale."
+        is IllegalArgumentException -> "Use HTTPS or http://10.77.0.1:4533 with Wonhee VPN."
         else -> "Navidrome returned an unexpected API response."
     }
 
@@ -193,7 +202,13 @@ internal class NetworkLibraryState(
                 status = "Enter your password. The saved login may no longer be available."
                 return
             }
-            val candidate = SubsonicLibraryClient(target, account, secret).apply {
+            val candidate = SubsonicLibraryClient(target, account, secret) { url ->
+                if (PrivateVpnServerRules.isPrivateWireGuard(url)) {
+                    PrivateVpnNetworkGate.openConnection(appContext, url)
+                } else {
+                    url.openConnection() as HttpURLConnection
+                }
+            }.apply {
                 streamQuality = this@NetworkLibraryState.streamQuality
             }
             val first = withContext(Dispatchers.IO) {
