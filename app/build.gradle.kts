@@ -21,8 +21,8 @@ android {
         applicationId = "com.mokamusic.player"
         minSdk = 26
         targetSdk = 36
-        versionCode = 38
-        versionName = "4.0.0-beta06"
+        versionCode = 39
+        versionName = "4.0.0-beta06.1-wonhee-preview"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -86,6 +86,8 @@ dependencies {
     implementation("androidx.media3:media3-session:1.11.1")
     implementation("androidx.media3:media3-common:1.11.1")
     implementation("androidx.media3:media3-inspector:1.11.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.guava:guava:33.7.2-android")
     testImplementation("junit:junit:4.13.2")
     // Android's org.json stubs throw on the local JVM; use the real JSON parser in tests.

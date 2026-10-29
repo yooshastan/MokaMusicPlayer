@@ -415,7 +415,7 @@ class MokaViewModel(application: Application) : AndroidViewModel(application) {
             } catch (_: Exception) {
                 // Exception text might contain a signed Subsonic URL. Never display or log it.
                 library.mixedShuffleStatus =
-                    "Couldn't load Navidrome songs. Check Tailscale or your server connection."
+                    "Couldn't load Navidrome songs. Check your VPN or Navidrome server connection."
             } finally {
                 library.mixedShuffleBusy = false
             }

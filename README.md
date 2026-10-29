@@ -8,6 +8,14 @@
 >
 > **Important:** This is a debug-signed device-test APK, **not a production release-signed build**. If your currently installed Moka APK was signed with a different certificate, Android cannot update it in place. Do not uninstall an existing build with important data without a backup/migration plan.
 
+## Wonhee private Navidrome preview (Beta 6.1)
+
+An opt-in preview supports the tested WireGuard-only Navidrome endpoint `http://10.77.0.1:4533` alongside existing HTTPS/Tailscale login. Android's cleartext exception is limited to that address; Navidrome requests and audio streams are bound to the Android VPN network, and fail closed when no VPN route to that server exists. Saved credentials remain encrypted with Android Keystore, and Original/Lossless remains the default network quality.
+
+Requires a working Wonhee VPN profile on the phone **and** a Fedora server listener/forwarder on `10.77.0.1:4533` accessible through `wg0`. The service at `127.0.0.1:4533` alone is not reachable by the phone. Do not expose TCP 4533 to the public internet. For other addresses, keep using HTTPS.
+
+To test: connect Wonhee on the phone, open **Moka → Settings → Network/Navidrome**, enter `http://10.77.0.1:4533`, sign in, test library/FLAC playback, then deliberately disconnect the VPN and confirm private streams fail without bypass. See `docs/WONHEE_PRIVATE_NAVIDROME_TEST.md`. This is a preview; validate on hardware before replacing the Beta 6 release.
+
 ## Beta 6 — integrated Android testing
 
 Beta 6 integrates the previously tested RC2.5 features: an HTTPS Navidrome/Subsonic library within Moka, encrypted saved credentials, full library browsing and paging, network/local queue and shuffle features, original/lossless network streams where available, honest WMA transcoding, and source audio technical metadata.

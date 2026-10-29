@@ -29,9 +29,9 @@ enum class NetworkStreamQuality(val label: String) {
 }
 
 /**
- * Explicit HTTPS-only Navidrome/Subsonic connection.
- * Username and password stay in memory; nothing is written to preferences or logs.
- * Subsonic token/salt hashes are only passed to the caller-selected HTTPS server.
+ * HTTPS Navidrome/Subsonic, or the explicitly allowed private WireGuard endpoint.
+ * Credentials stay in memory and are never logged; the private HTTP endpoint
+ * must be bound to Android's VPN Network by the caller.
  */
 /** Sanitized HTTP failure: never put the token-bearing request URL into UI or logs. */
 class SubsonicHttpException(val statusCode: Int) :
@@ -335,13 +335,15 @@ class SubsonicLibraryClient(
     companion object {
         fun validateServerUrl(input: String): String {
             val url = URL(input.trim().trimEnd('/'))
-            require(url.protocol.equals("https", true)) {
-                "HTTPS is required. Set up an HTTPS reverse proxy or a private TLS endpoint."
+            require(url.protocol.equals("https", true) ||
+                PrivateVpnServerRules.isPrivateWireGuard(url)) {
+                "Use HTTPS or the explicit private WireGuard endpoint http://10.77.0.1:4533."
             }
             require(url.host.isNotBlank() && url.userInfo == null && url.query == null &&
                 url.ref == null) { "Use a server URL without credentials, query or fragment" }
             val path = url.path.trimEnd('/').removeSuffix("/rest")
-            return "https://${url.authority}$path"
+            val scheme = if (PrivateVpnServerRules.isPrivateWireGuard(url)) "http" else "https"
+            return "$scheme://${url.authority}$path"
         }
     }
 }

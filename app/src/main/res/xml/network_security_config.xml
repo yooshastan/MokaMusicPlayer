@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Do not weaken HTTPS requirements for any other host. -->
+    <base-config cleartextTrafficPermitted="false" />
+    <!-- Opt-in private WireGuard access. Android route binding is also checked in code. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain>10.77.0.1</domain>
+    </domain-config>
+</network-security-config>
