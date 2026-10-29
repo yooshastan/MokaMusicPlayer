@@ -13,6 +13,20 @@ val keystoreProperties = Properties().apply {
     }
 }
 
+// CI receives these only during an explicit trusted signing job. Local builds
+// retain their existing untracked keystore.properties configuration.
+val releaseStorePath = System.getenv("MOKA_SIGNING_STORE_FILE")?.takeIf { it.isNotBlank() }
+    ?: keystoreProperties.getProperty("storeFile")
+val releaseStorePassword = System.getenv("MOKA_SIGNING_STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+    ?: keystoreProperties.getProperty("storePassword")
+val releaseKeyAlias = System.getenv("MOKA_SIGNING_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+    ?: keystoreProperties.getProperty("keyAlias")
+val releaseKeyPassword = System.getenv("MOKA_SIGNING_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+    ?: keystoreProperties.getProperty("keyPassword")
+val releaseSigningConfigured = listOf(
+    releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.mokamusic.player"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
@@ -31,11 +45,11 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+            if (releaseSigningConfigured) {
+                storeFile = file(requireNotNull(releaseStorePath))
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -43,7 +57,7 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            if (keystorePropertiesFile.exists()) {
+            if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
