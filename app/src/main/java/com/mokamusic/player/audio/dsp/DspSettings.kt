@@ -58,6 +58,10 @@ data class DspSettings(
     }
 }
 
+/** Display-only labels do not change audio samples and must not rebuild DSP. */
+fun DspSettings.processingFingerprint(): DspSettings =
+    copy(ddcName = null, convolverName = null)
+
 class DspSettingsStore(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
