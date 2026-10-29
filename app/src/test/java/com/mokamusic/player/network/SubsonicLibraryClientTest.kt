@@ -184,6 +184,46 @@ class SubsonicLibraryClientTest {
             SubsonicLibraryClient.validateServerUrl("https://music.example.org/prefix/rest/"))
     }
 
+
+    @Test fun privateWireGuardEndpointIsTheOnlyAllowedCleartextServer() {
+        assertEquals("http://10.77.0.1:4533",
+            SubsonicLibraryClient.validateServerUrl("http://10.77.0.1:4533/rest/"))
+        listOf(
+            "http://music.example.org",
+            "http://10.77.0.2:4533",
+            "http://10.77.0.1:4534",
+            "http://10.77.0.1",
+            "http://10.77.0.1:4533?x=y",
+            "http://10.77.0.1:4533/#fragment",
+            "http://user:password@10.77.0.1:4533",
+            "http://10.77.0.1.example.org:4533"
+        ).forEach { input ->
+            assertThrows("Should reject $input", IllegalArgumentException::class.java) {
+                SubsonicLibraryClient.validateServerUrl(input)
+            }
+        }
+    }
+
+    @Test fun privateWireGuardServerKeepsSignedOriginalFlacAndApiPaths() {
+        val requested = mutableListOf<URL>()
+        val client = SubsonicLibraryClient(
+            "http://10.77.0.1:4533", "listener", "secret"
+        ) { url ->
+            requested += url
+            FakeHttps(url, """{"subsonic-response":{"status":"ok","version":"1.16.1"}}""")
+        }
+        client.ping()
+        assertEquals("10.77.0.1", requested.single().host)
+        assertEquals(4533, requested.single().port)
+        assertTrue(requested.single().path.endsWith("/rest/ping.view"))
+        val stream = client.streamRequestUrl("flac-test", "audio/flac")
+        assertTrue(stream.startsWith("http://10.77.0.1:4533/rest/stream.view?"))
+        assertTrue(stream.contains("format=raw"))
+        assertTrue(stream.contains("maxBitRate=0"))
+        assertFalse(stream.contains("secret"))
+        assertEquals("audio/flac", client.playbackMimeType("audio/flac"))
+    }
+
     @Test fun categoriesUseServerIndexesAndGenrePaging() {
         val requested = mutableListOf<URL>()
         val client = SubsonicLibraryClient("https://fedora.example.ts.net", "u", "pw") { url ->
