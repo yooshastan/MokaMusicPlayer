@@ -12,6 +12,9 @@ internal object PrivateVpnServerRules {
     const val PORT = 4533
     const val BASE_URL = "http://10.77.0.1:4533"
 
+    fun isPrivateWireGuard(input: String): Boolean =
+        runCatching { isPrivateWireGuard(URL(input.trim())) }.getOrDefault(false)
+
     fun isPrivateWireGuard(url: URL): Boolean =
         url.protocol.equals("http", ignoreCase = true) &&
             url.host == HOST && url.port == PORT
