@@ -22,7 +22,7 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
         ) {
             Text("Navidrome account", style = MaterialTheme.typography.titleLarge)
             Text(
-                "Configure one private HTTPS Navidrome/Subsonic server here. " +
+                "Configure HTTPS/Tailscale or an opt-in private Wonhee WireGuard server. " +
                     "Browse music using Library → Network.",
                 style = MaterialTheme.typography.bodySmall
             )
@@ -33,8 +33,8 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
             OutlinedTextField(
                 value = state.server, onValueChange = state::updateServer,
                 enabled = state.client == null, singleLine = true,
-                label = { Text("Server HTTPS URL") },
-                placeholder = { Text("https://fedora.tailnet.ts.net") },
+                label = { Text("Navidrome server URL") },
+                placeholder = { Text("https://… or http://10.77.0.1:4533") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
@@ -110,9 +110,12 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Forget server and saved login") }
             Text(
-                "For access anywhere, connect Fedora and your phone to the same " +
-                    "Tailscale network, enable Tailscale Serve on Fedora, then enter " +
-                    "its https://…ts.net address here. No public port forwarding.",
+                "Wonhee mode: connect the phone to Wonhee VPN first, then enter " +
+                    "http://10.77.0.1:4533. This single private HTTP address is allowed " +
+                    "only over an Android VPN route; it never falls back to Wi-Fi/cellular. " +
+                    "WireGuard encrypts the tunnel but this URL does not use HTTPS. " +
+                    "Existing Tailscale HTTPS connections remain supported. " +
+                    "Do not expose Navidrome through public port forwarding.",
                 style = MaterialTheme.typography.bodySmall
             )
         }
