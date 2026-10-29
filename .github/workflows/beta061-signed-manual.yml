@@ -1,0 +1,93 @@
+name: Moka Beta 6.1 persistent-key signed APK (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: moka-beta061-manual-sign
+  cancel-in-progress: false
+
+jobs:
+  sign-and-verify:
+    # Never sign in a pull request or on unreviewed feature branches.
+    if: github.repository == 'yooshastan/MokaMusicPlayer' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.2" "build-tools;37.0.0" \
+            --channel=3 "cmake;3.22.1" "ndk;28.2.13676358"
+      - name: Restore persistent release signing identity
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.MOKA_SIGNING_STORE_B64 }}
+          STORE_PASS: ${{ secrets.MOKA_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.MOKA_SIGNING_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.MOKA_SIGNING_KEY_PASSWORD }}
+          PINNED_CERT: ${{ secrets.MOKA_SIGNING_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_B64" || -z "$STORE_PASS" || -z "$KEY_ALIAS" || -z "$KEY_PASS" ]]; then
+            echo "Missing Moka signing secrets. See docs/MOKA_SIGNED_RELEASE.md" >&2
+            exit 1
+          fi
+          if [[ ! "$PINNED_CERT" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "Missing/invalid MOKA_SIGNING_CERT_SHA256 fingerprint." >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/moka-release.jks"
+          echo "MOKA_SIGNING_STORE_FILE=$RUNNER_TEMP/moka-release.jks" >> "$GITHUB_ENV"
+      - name: Unit tests and signed release build
+        shell: bash
+        env:
+          MOKA_SIGNING_STORE_PASSWORD: ${{ secrets.MOKA_SIGNING_STORE_PASSWORD }}
+          MOKA_SIGNING_KEY_ALIAS: ${{ secrets.MOKA_SIGNING_KEY_ALIAS }}
+          MOKA_SIGNING_KEY_PASSWORD: ${{ secrets.MOKA_SIGNING_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest :app:assembleRelease --no-build-cache --stacktrace
+      - name: Verify APK version and pinned signing certificate
+        shell: bash
+        env:
+          EXPECTED_CERT_SHA256: ${{ secrets.MOKA_SIGNING_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/release/app-release.apk"
+          test -s "$apk"
+          aapt="$ANDROID_HOME/build-tools/37.0.0/aapt"
+          signer="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          "$aapt" dump badging "$apk" | grep -E "package: name='com.mokamusic.player'.*versionCode='39'.*versionName='4.0.0-beta06.1-wonhee-preview'"
+          report="$("$signer" verify --print-certs "$apk")"
+          actual="$(printf '%s\n' "$report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)"
+          actual="${actual//:/}"
+          actual="${actual//[[:space:]]/}"
+          if [[ ! "$actual" =~ ^[[:xdigit:]]{64}$ || "${actual,,}" != "${EXPECTED_CERT_SHA256,,}" ]]; then
+            echo "Release certificate mismatch. Refusing to upload." >&2
+            exit 1
+          fi
+          cp "$apk" Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk
+          sha256sum Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk > SHA256SUMS.txt
+          echo "Moka signed APK verified against pinned release certificate." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload signed preview (not a public release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: moka-beta061-persistent-key-signed-apk
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk
+            SHA256SUMS.txt
