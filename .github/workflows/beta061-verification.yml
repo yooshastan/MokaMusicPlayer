@@ -1,4 +1,4 @@
-name: Beta 6.1 Wonhee preview verification
+name: Moka Beta 6.2 DSP preview verification
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: beta061-tests-${{ github.ref }}
+  group: beta062-tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -41,14 +41,14 @@ jobs:
           APK=app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" |
-            grep -E "package: name='com.mokamusic.player'.*versionCode='39'.*versionName='4.0.0-beta06.1-wonhee-preview'"
+            grep -E "package: name='com.mokamusic.player'.*versionCode='40'.*versionName='4.0.0-beta06.2-dsp-preview'"
           cp "$APK" Moka-Music-Player-4.0.0-beta06.1-wonhee-preview-debug.apk
           sha256sum Moka-Music-Player-4.0.0-beta06.1-wonhee-preview-debug.apk > SHA256SUMS.txt
       - name: Upload APK and test reports even if tests fail
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moka-beta061-wonhee-preview
+          name: moka-beta062-flac-dsp-preview
           if-no-files-found: warn
           path: |
             Moka-Music-Player-4.0.0-beta06.1-wonhee-preview-debug.apk
