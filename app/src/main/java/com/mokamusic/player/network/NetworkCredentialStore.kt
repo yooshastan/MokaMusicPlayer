@@ -28,7 +28,8 @@ internal class NetworkCredentialStore(context: Context) {
     fun isSaved(): Boolean = file.baseFile.exists()
 
     fun save(login: SavedNetworkLogin) {
-        require(login.server.startsWith("https://") && login.username.isNotBlank())
+        require(login.username.isNotBlank())
+        require(runCatching { SubsonicLibraryClient.validateServerUrl(login.server) }.isSuccess)
         val data = org.json.JSONObject().apply {
             put("server", login.server)
             put("username", login.username)
@@ -63,7 +64,10 @@ internal class NetworkCredentialStore(context: Context) {
             server = json.getString("server"),
             username = json.getString("username"),
             password = json.getString("password")
-        ).takeIf { it.server.startsWith("https://") && it.username.isNotBlank() }
+        ).takeIf {
+            it.username.isNotBlank() &&
+                runCatching { SubsonicLibraryClient.validateServerUrl(it.server) }.isSuccess
+        }
     }.getOrNull()
 
     fun clear() {
