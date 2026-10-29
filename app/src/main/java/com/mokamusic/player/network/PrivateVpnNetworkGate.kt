@@ -40,7 +40,10 @@ internal object PrivateVpnNetworkGate {
         if (!PrivateVpnServerRules.isPrivateWireGuard(url)) {
             throw IOException("Private HTTP is restricted to the configured WireGuard endpoint")
         }
-        return requireVpnNetwork(context)
-            .openConnection(url, Proxy.NO_PROXY) as HttpURLConnection
+        return (requireVpnNetwork(context)
+            .openConnection(url, Proxy.NO_PROXY) as HttpURLConnection).apply {
+            // Never follow HTTP redirects to a non-VPN destination.
+            instanceFollowRedirects = false
+        }
     }
 }
