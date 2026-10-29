@@ -14,7 +14,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -52,16 +51,12 @@ class PlaybackService : MediaLibraryService() {
         val renderersFactory = DefaultRenderersFactory(this)
             .setEnableAudioFloatOutput(true)
 
-        // Media3 handles every HTTPS/Navidrome source. A slower WAV/FLAC stream on
-        // cellular or Tailscale needs longer read timeouts than a local audio file.
-        // Do not permit HTTPS -> HTTP redirects for signed streaming URLs.
-        val httpSourceFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(45_000)
-            .setAllowCrossProtocolRedirects(false)
-            .setUserAgent("MokaMusicPlayer/4.0")
+        // Keep normal HTTPS/Media3 playback unchanged. The explicitly allowed
+        // WireGuard-only HTTP source uses sockets bound to Android's VPN Network
+        // and fails if that network is unavailable, never using Wi-Fi/cellular.
         val mediaSources = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(DefaultDataSource.Factory(this, httpSourceFactory))
+            .setDataSourceFactory(DefaultDataSource.Factory(
+                this, MokaRoutingHttpDataSourceFactory(this)))
 
         val audioOutputProvider = MokaAudioOutputProvider(this)
         val fallback = ExoPlayer.Builder(this, renderersFactory)
