@@ -8,6 +8,10 @@
 >
 > **Important:** This is a debug-signed device-test APK, **not a production release-signed build**. If your currently installed Moka APK was signed with a different certificate, Android cannot update it in place. Do not uninstall an existing build with important data without a backup/migration plan.
 
+## Beta 6.2 FLAC/DSP reliability preview
+
+A separate experimental branch now avoids redundant DSP chain rebuild requests when a user saves unchanged audio settings or changes only display labels. It also reports local/streamed track start delays above five seconds via `MokaTransition` logcat. Codec, DSP math and audio buffers are unchanged pending device measurements. Test local and Wonhee/Navidrome FLAC on Pixel 8a and Samsung A36 using `docs/BETA062_FLAC_DSP_PERF_TEST.md`. The tested Beta 6.1 remains the stable baseline.
+
 ## Wonhee private Navidrome preview (Beta 6.1)
 
 An opt-in preview supports the tested WireGuard-only Navidrome endpoint `http://10.77.0.1:4533` alongside existing HTTPS/Tailscale login. Android's cleartext exception is limited to that address; Navidrome requests and audio streams are bound to the Android VPN network, and fail closed when no VPN route to that server exists. Saved credentials remain encrypted with Android Keystore, and Original/Lossless remains the default network quality.

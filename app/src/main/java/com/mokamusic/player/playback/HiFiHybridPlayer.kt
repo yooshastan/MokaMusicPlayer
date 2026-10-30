@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.mokamusic.player.audio.AudioPathMonitor
 import com.mokamusic.player.audio.DirectPcmEngine
 import com.mokamusic.player.audio.dsp.DspSettingsStore
+import com.mokamusic.player.audio.dsp.processingFingerprint
 
 /**
  * Keeps ExoPlayer/Media3 as Moka's playlist, session and fallback engine while routing eligible
@@ -43,12 +44,17 @@ class HiFiHybridPlayer(
     private var resumeOnFocusGain = false
     private var focusDucked = false
     private val dspStore = DspSettingsStore(appContext)
+    private var lastDspAudioSettings = dspStore.load().processingFingerprint()
     private val dspReloadRunnable = Runnable { reloadCurrentItemForDspSettings() }
     private val dspPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        // EQ sliders can save dozens of values while dragging. Debounce rebuild requests so the
-        // background DSP builder can coalesce edits without thrashing the live audio path.
-        mainHandler.removeCallbacks(dspReloadRunnable)
-        mainHandler.postDelayed(dspReloadRunnable, 350L)
+        // A full preset save can notify once per key even when settings did not change.
+        // Only audio-affecting changes should rebuild a DSP chain; labels are UI metadata.
+        val changed = runCatching { dspStore.load().processingFingerprint() }.getOrNull()
+        if (changed == null || changed != lastDspAudioSettings) {
+            if (changed != null) lastDspAudioSettings = changed
+            mainHandler.removeCallbacks(dspReloadRunnable)
+            mainHandler.postDelayed(dspReloadRunnable, 350L)
+        }
     }
 
     @Volatile private var directActive = false
@@ -256,6 +262,7 @@ class HiFiHybridPlayer(
 
     override fun handleRelease(): ListenableFuture<*> {
         mainHandler.removeCallbacks(dspReloadRunnable)
+        transition.close()
         dspStore.unregisterListener(dspPreferenceListener)
         focus.abandon()
         restoreDucking()
