@@ -23,13 +23,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Android SDK
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-37.2" "build-tools;37.0.0" \
-            --channel=3 "cmake;3.22.1" "ndk;28.2.13676358"
+      - name: Validate local signing setup helper syntax
+        run: bash -n scripts/configure-moka-github-signing.sh
       - name: Restore persistent release signing identity
         shell: bash
         env:
@@ -40,17 +35,34 @@ jobs:
           PINNED_CERT: ${{ secrets.MOKA_SIGNING_CERT_SHA256 }}
         run: |
           set -euo pipefail
-          if [[ -z "$KEYSTORE_B64" || -z "$STORE_PASS" || -z "$KEY_ALIAS" || -z "$KEY_PASS" ]]; then
-            echo "Missing Moka signing secrets. See docs/MOKA_SIGNED_RELEASE.md" >&2
+          set +x
+          missing=()
+          [[ -n "$KEYSTORE_B64" ]] || missing+=(MOKA_SIGNING_STORE_B64)
+          [[ -n "$STORE_PASS" ]] || missing+=(MOKA_SIGNING_STORE_PASSWORD)
+          [[ -n "$KEY_ALIAS" ]] || missing+=(MOKA_SIGNING_KEY_ALIAS)
+          [[ -n "$KEY_PASS" ]] || missing+=(MOKA_SIGNING_KEY_PASSWORD)
+          [[ -n "$PINNED_CERT" ]] || missing+=(MOKA_SIGNING_CERT_SHA256)
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Missing GitHub REPOSITORY secrets for yooshastan/MokaMusicPlayer: %s\n' "${missing[*]}"
+            echo 'Store them under Settings > Secrets and variables > Actions > Repository secrets, not Variables or another repository/environment.' >&2
+            echo 'Use bash scripts/configure-moka-github-signing.sh from your trusted Fedora workstation.' >&2
             exit 1
           fi
           if [[ ! "$PINNED_CERT" =~ ^[[:xdigit:]]{64}$ ]]; then
-            echo "Missing/invalid MOKA_SIGNING_CERT_SHA256 fingerprint." >&2
+            echo "::error::MOKA_SIGNING_CERT_SHA256 must be exactly 64 hexadecimal characters." >&2
             exit 1
           fi
           umask 077
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/moka-release.jks"
+          test -s "$RUNNER_TEMP/moka-release.jks"
           echo "MOKA_SIGNING_STORE_FILE=$RUNNER_TEMP/moka-release.jks" >> "$GITHUB_ENV"
+      - name: Install Android SDK
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.2" "build-tools;37.0.0" \
+            --channel=3 "cmake;3.22.1" "ndk;28.2.13676358"
       - name: Unit tests and signed release build
         shell: bash
         env:
