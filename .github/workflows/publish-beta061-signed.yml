@@ -31,6 +31,7 @@ jobs:
       RELEASE_TAG: 'v4.0.0-beta06.1'
       APK_NAME: 'Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk'
     steps:
+      - uses: actions/checkout@v4
       - name: Verify successful signing run and immutable artifact provenance
         shell: bash
         run: |
@@ -73,11 +74,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::Release $RELEASE_TAG already exists. Refusing to overwrite its assets."
             exit 1
           fi
-          gh release create "$RELEASE_TAG" \
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
             "release-files/moka-beta061-persistent-key-signed-apk/$APK_NAME" \
             "release-files/moka-beta061-persistent-key-signed-apk/SHA256SUMS.txt" \
             --target "$SOURCE_SHA" \
