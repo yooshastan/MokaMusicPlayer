@@ -62,7 +62,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd release-files
+          cd release-files/moka-beta061-persistent-key-signed-apk
           test -s "$APK_NAME"
           test -s SHA256SUMS.txt
           test "$(wc -l < SHA256SUMS.txt)" -eq 1
@@ -78,8 +78,8 @@ jobs:
             exit 1
           fi
           gh release create "$RELEASE_TAG" \
-            "release-files/$APK_NAME" \
-            "release-files/SHA256SUMS.txt" \
+            "release-files/moka-beta061-persistent-key-signed-apk/$APK_NAME" \
+            "release-files/moka-beta061-persistent-key-signed-apk/SHA256SUMS.txt" \
             --target "$SOURCE_SHA" \
             --title 'Moka Music Player 4.0 Beta 6.1 (signed preview)' \
             --prerelease --latest=false \
