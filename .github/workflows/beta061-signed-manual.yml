@@ -55,6 +55,29 @@ jobs:
           umask 077
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/moka-release.jks"
           test -s "$RUNNER_TEMP/moka-release.jks"
+          # Check the actual key's public certificate before costly Android builds.
+          # Never print keystore contents, the key alias, or passwords.
+          if ! certificate_details="$(keytool -list -v \
+            -keystore "$RUNNER_TEMP/moka-release.jks" \
+            -alias "$KEY_ALIAS" -storepass:env STORE_PASS 2>/dev/null)"; then
+            echo "::error::Cannot inspect the configured signing alias; check Moka's keystore, alias and password repository secrets." >&2
+            exit 1
+          fi
+          if [[ "$certificate_details" != *"Entry type: PrivateKeyEntry"* ]]; then
+            echo "::error::Selected signing alias must be a PrivateKeyEntry." >&2
+            exit 1
+          fi
+          actual_cert="$(printf '%s\n' "$certificate_details" | sed -n 's/.*SHA256: *//p' | head -n 1 | tr -d ':\r[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if [[ ! "$actual_cert" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::Unable to obtain SHA-256 from signing alias certificate." >&2
+            exit 1
+          fi
+          echo "Public signing certificate SHA-256: $actual_cert"
+          if [[ "$actual_cert" != "${PINNED_CERT,,}" ]]; then
+            echo "::error::MOKA_SIGNING_CERT_SHA256 does not match the certificate actually contained in MOKA_SIGNING_STORE_B64. Compare with the already-published Moka APK before selecting an identity. No APK uploaded." >&2
+            exit 1
+          fi
+          echo "Pinned release signing identity verified against keystore."
           echo "MOKA_SIGNING_STORE_FILE=$RUNNER_TEMP/moka-release.jks" >> "$GITHUB_ENV"
       - name: Install Android SDK
         run: |
