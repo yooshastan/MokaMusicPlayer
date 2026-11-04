@@ -1,0 +1,97 @@
+name: Publish Moka Beta 6.1 signed prerelease
+
+# Promotes only the immutable artifact from the verified manual signing run.
+# The path-scoped push performs the initial publication when this workflow is merged.
+on:
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/publish-beta061-signed.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: moka-beta061-signed-prerelease-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'yooshastan/MokaMusicPlayer' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: '41899325959'
+      SOURCE_SHA: '8e49ba759a90dbebb71c006839d0507888c1b51e'
+      SOURCE_ARTIFACT_ID: '13356774182'
+      SOURCE_ARTIFACT_DIGEST: 'sha256:e1c7c0c1cd3e54a5c930ef65697bbe106db57684f6f2b4d627c549666a85551d'
+      RELEASE_TAG: 'v4.0.0-beta06.1'
+      APK_NAME: 'Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk'
+    steps:
+      - name: Verify successful signing run and immutable artifact provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          [[ "$(jq -r '.status' <<< "$run_json")" == 'completed' ]] || exit 1
+          [[ "$(jq -r '.conclusion' <<< "$run_json")" == 'success' ]] || exit 1
+          [[ "$(jq -r '.head_sha' <<< "$run_json")" == "$SOURCE_SHA" ]] || exit 1
+          [[ "$(jq -r '.head_branch' <<< "$run_json")" == 'master' ]] || exit 1
+          [[ "$(jq -r '.path' <<< "$run_json")" == '.github/workflows/beta061-signed-manual.yml' ]] || exit 1
+          artifact_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$SOURCE_ARTIFACT_ID")"
+          [[ "$(jq -r '.name' <<< "$artifact_json")" == 'moka-beta061-persistent-key-signed-apk' ]] || exit 1
+          [[ "$(jq -r '.workflow_run.id' <<< "$artifact_json")" == "$SOURCE_RUN_ID" ]] || exit 1
+          [[ "$(jq -r '.workflow_run.head_sha' <<< "$artifact_json")" == "$SOURCE_SHA" ]] || exit 1
+          [[ "$(jq -r '.digest' <<< "$artifact_json")" == "$SOURCE_ARTIFACT_DIGEST" ]] || exit 1
+          [[ "$(jq -r '.expired' <<< "$artifact_json")" == 'false' ]] || exit 1
+          echo 'Source signing run and exact immutable artifact verified.'
+
+      - name: Download tested signed APK
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '13356774182'
+          run-id: '41899325959'
+          github-token: ${{ github.token }}
+          repository: yooshastan/MokaMusicPlayer
+          path: release-files
+
+      - name: Verify APK checksum and release contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-files
+          test -s "$APK_NAME"
+          test -s SHA256SUMS.txt
+          test "$(wc -l < SHA256SUMS.txt)" -eq 1
+          sha256sum -c SHA256SUMS.txt
+          echo 'Verified the exact signed APK from successful run #6.'
+
+      - name: Publish permanent GitHub prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Release $RELEASE_TAG already exists. Refusing to overwrite its assets."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" \
+            "release-files/$APK_NAME" \
+            "release-files/SHA256SUMS.txt" \
+            --target "$SOURCE_SHA" \
+            --title 'Moka Music Player 4.0 Beta 6.1 (signed preview)' \
+            --prerelease --latest=false \
+            --notes 'Moka Music Player 4.0 Beta 6.1 is the first persistent-key-signed Moka preview APK.
+
+          **Build:** com.mokamusic.player / versionCode 39 / versionName 4.0.0-beta06.1-wonhee-preview.
+          **Publisher:** Yooshastan Studios.
+          **Provenance:** Verified GitHub Actions signing run #6, with matching keystore, Gradle release variant and APK signing certificate. The APK checksum is in SHA256SUMS.txt.
+
+          Highlights include local lossless audio playback, native audio DSP and headphone tuning, Navidrome network library with Original/Lossless streaming, shuffle and queue handling, and the optional private Wonhee/WireGuard-only Navidrome preview. Private-network streaming fails closed when the required VPN route is absent.
+
+          **Installation warning:** Prior Moka Beta 6 test APKs (including the existing Uptodown build) used a different Android Debug signing certificate. Android will not ordinarily install this signed APK as an in-place update to those builds. Back up any important app settings or data before uninstalling a previous test build.
+
+          This is a beta preview for testing, not a claim of production stability.'
+          echo "Published signed Moka prerelease: $RELEASE_TAG"
