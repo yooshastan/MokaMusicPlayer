@@ -138,11 +138,11 @@ jobs:
           # The certificate is public. Report the actual APK signer if it differs
           # from the proven private-keystore/Gradle certificate.
           report="$("$signer" verify --verbose --print-certs "$apk")"
-          # Android apksigner may describe a signer as either "#1" or
-          # "(minSdkVersion=..., maxSdkVersion=...)" depending on signature scheme.
-          # Every certificate applicable to supported Android versions must match.
+          # apksigner emits "V2 Signer:", "Signer #1", or
+          # "Signer (minSdkVersion=..., maxSdkVersion=...)" depending on version.
+          # Check every public signer certificate against the pinned release key.
           mapfile -t signer_digests < <(printf '%s\n' "$report" |
-            sed -nE 's/^[[:space:]]*Signer( #[0-9]+| \([^)]*\)) certificate SHA-256 digest:[[:space:]]*([0-9a-fA-F:]+)[[:space:]]*$/\2/p')
+            sed -nE 's/^[[:space:]]*.*Signer.*certificate SHA-256 digest:[[:space:]]*([0-9a-fA-F:]+)[[:space:]]*$/\1/p')
           if (( ${#signer_digests[@]} == 0 )); then
             echo "::error::APK signature verifies, but no signer certificate SHA-256 could be parsed."
             # Certificate metadata is public; never dump signing-key or password variables.
