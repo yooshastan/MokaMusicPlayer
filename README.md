@@ -2,11 +2,11 @@
 
 **Moka Music Player** is a local-first high-fidelity Android music player built around transparent audio routing, source-rate-aware playback and a native real-time DSP engine.
 
-> **Latest test release: [v4.0.0-beta06](https://github.com/JLukassen/MokaMusicPlayer/releases/tag/v4.0.0-beta06)** · Android versionCode **38** · debug-signed GitHub prerelease
+> **Latest signed preview: [v4.0.0-beta06.1](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06.1)** · Android versionCode **39** · persistent-key signed GitHub prerelease
 >
-> **[Download the Beta 6 APK](https://github.com/JLukassen/MokaMusicPlayer/releases/download/v4.0.0-beta06/Moka-Music-Player-4.0.0-beta06-debug.apk)** · [SHA-256 checksums](https://github.com/JLukassen/MokaMusicPlayer/releases/download/v4.0.0-beta06/SHA256SUMS.txt) · [Beta 6 release notes](docs/BETA6_RELEASE_NOTES.md) · [Full changelog](CHANGELOG.md)
+> **[Download the signed Beta 6.1 APK](https://github.com/yooshastan/MokaMusicPlayer/releases/download/v4.0.0-beta06.1/Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk)** · [SHA-256 checksum](https://github.com/yooshastan/MokaMusicPlayer/releases/download/v4.0.0-beta06.1/SHA256SUMS.txt) · [Release notes](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06.1) · [Full changelog](CHANGELOG.md)
 >
-> **Important:** This is a debug-signed device-test APK, **not a production release-signed build**. If your currently installed Moka APK was signed with a different certificate, Android cannot update it in place. Do not uninstall an existing build with important data without a backup/migration plan.
+> **Important:** Earlier Beta 6 test APKs were signed with an Android Debug certificate different from the persistent release key. Android cannot update those builds in place. Back up important data before removing an old test build.
 
 ## Wonhee private Navidrome preview (Beta 6.1)
 
@@ -65,18 +65,18 @@ This update focuses on **Samsung library browsing, metadata extraction and artwo
 
 These are code-path improvements, not a guarantee of a particular load time on every device.
 
-### Install or upgrade the test APK
+### Install or upgrade the signed Beta 6.1 APK
 
-Download the [Beta 6 debug APK](https://github.com/JLukassen/MokaMusicPlayer/releases/download/v4.0.0-beta06/Moka-Music-Player-4.0.0-beta06-debug.apk). For an ADB installation on a connected Android device:
+Download the [signed Beta 6.1 APK](https://github.com/yooshastan/MokaMusicPlayer/releases/download/v4.0.0-beta06.1/Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk). For an ADB installation on a connected Android device:
 
 ```bash
 adb devices -l
-adb -s DEVICE_SERIAL install -r Moka-Music-Player-4.0.0-beta06-debug.apk
+adb -s DEVICE_SERIAL install -r Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk
 ```
 
-The `-r` flag preserves the installed app's data **when Android accepts the update and the signing certificates match**. Android will reject an upgrade if the existing Moka APK was signed with a different key. **Do not uninstall just to work around a signature mismatch** unless you have safely backed up any settings and analysis data you need.
+The `-r` flag preserves installed app data only when Android accepts the update and the signing certificate matches. The previous Beta 6 debug-signed APK uses a **different** certificate and cannot be updated in place by this persistent-release-key APK. **Back up important data before considering uninstall/reinstall.** Future signed Moka releases must continue using this same persistent release identity.
 
-The GitHub-hosted APK is debug-signed, so it may not share a certificate with a locally built APK or a future Play-signed APK. The [previous Beta 5](https://github.com/JLukassen/MokaMusicPlayer/releases/tag/v4.0.0-beta05) remains available for comparison.
+The [previous Beta 6 debug-signed test release](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06) remains available for historical comparison.
 
 ---
 
@@ -332,7 +332,7 @@ adb devices -l
 adb -s DEVICE_SERIAL install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-A local debug APK can have a different signing key than the [published Beta 6 test APK](https://github.com/JLukassen/MokaMusicPlayer/releases/tag/v4.0.0-beta06); a mismatched update will be rejected. Do not discard app data solely to switch keys.
+A local debug APK can have a different signing key than the [published Beta 6 test APK](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06); a mismatched update will be rejected. Do not discard app data solely to switch keys.
 
 To run the project-specific preflight checks:
 
@@ -451,4 +451,4 @@ See `PRIVACY.md`.
 - **Release qualification:** physical-device playback, FLAC/WAV library browse/refresh, normalization, storage performance and long-running soak tests remain necessary. See [Beta checklist](BETA_CHECKLIST.md).
 - **Licensing audit:** transitive dependency notices and third-party DSP source provenance must be verified before a stable release. See [dependency license inventory](docs/release/DEPENDENCY_LICENSE_INVENTORY.md) and [DSP source provenance](docs/release/DSP_SOURCE_PROVENANCE.md).
 
-A beta can have documented limitations; Moka reports what it can verify and explicitly labels estimated or unsupported paths. See [changelog](CHANGELOG.md) for release-by-release changes and the [Beta 6 release](https://github.com/JLukassen/MokaMusicPlayer/releases/tag/v4.0.0-beta06) for the current APK.
+A beta can have documented limitations; Moka reports what it can verify and explicitly labels estimated or unsupported paths. See [changelog](CHANGELOG.md) for release-by-release changes and the [Beta 6 release](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06) for the current APK.
