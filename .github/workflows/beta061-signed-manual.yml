@@ -86,6 +86,31 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platforms;android-37.2" "build-tools;37.0.0" \
             --channel=3 "cmake;3.22.1" "ndk;28.2.13676358"
+      - name: Verify Gradle release signing identity before compilation
+        shell: bash
+        env:
+          EXPECTED_CERT_SHA256: ${{ secrets.MOKA_SIGNING_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          # Check the actual Gradle release VARIANT, not merely a key in the keystore.
+          # Do not show the alias, passwords or keystore path in logs.
+          signing_report="$(./gradlew :app:signingReport --console=plain --no-build-cache)"
+          release_cert="$(printf '%s\n' "$signing_report" | awk '
+            /^Variant: release$/ { in_release=1; next }
+            /^Variant: / { in_release=0 }
+            in_release && /^SHA-256:/ { print $2; exit }
+          ' | tr -d ':\r[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if [[ ! "$release_cert" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::Gradle release variant has no readable signing certificate. Refusing to build a potentially unsigned or debug-signed APK."
+            exit 1
+          fi
+          if [[ "$release_cert" != "${EXPECTED_CERT_SHA256,,}" ]]; then
+            echo "::error::Gradle release VARIANT certificate differs from the pinned keystore. Check app/build.gradle.kts signingConfig instead of changing GitHub secrets."
+            echo "Gradle release certificate (public): $release_cert"
+            exit 1
+          fi
+          echo "Gradle release signing certificate matches protected keystore."
+
       - name: Unit tests and signed release build
         shell: bash
         env:
@@ -106,14 +131,30 @@ jobs:
           aapt="$ANDROID_HOME/build-tools/37.0.0/aapt"
           signer="$ANDROID_HOME/build-tools/37.0.0/apksigner"
           "$aapt" dump badging "$apk" | grep -E "package: name='com.mokamusic.player'.*versionCode='39'.*versionName='4.0.0-beta06.1-wonhee-preview'"
-          report="$("$signer" verify --print-certs "$apk")"
-          actual="$(printf '%s\n' "$report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)"
-          actual="${actual//:/}"
-          actual="${actual//[[:space:]]/}"
-          if [[ ! "$actual" =~ ^[[:xdigit:]]{64}$ || "${actual,,}" != "${EXPECTED_CERT_SHA256,,}" ]]; then
-            echo "Release certificate mismatch. Refusing to upload." >&2
+          # The certificate is public. Report the actual APK signer if it differs
+          # from the proven private-keystore/Gradle certificate.
+          report="$("$signer" verify --verbose --print-certs "$apk")"
+          actual="$(printf '%s\n' "$report" | sed -nE 's/^[[:space:]]*Signer #[0-9]+ certificate SHA-256 digest:[[:space:]]*([0-9a-fA-F:]+)[[:space:]]*$/\1/p' | head -1 | tr -d ':\r[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if [[ ! "$actual" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::APK signature verifies, but its SHA-256 certificate line could not be parsed. Check apksigner format; do not alter the pinned key."
+            # Limit the diagnostic to public signer certificate metadata, not passwords.
+            printf '%s\n' "$report" | grep -E 'Signer #[0-9]+ certificate' || true
             exit 1
           fi
+          if [[ "$report" == *"certificate DN: CN=Android Debug"* ]]; then
+            echo "::error::Release APK has an Android Debug signing certificate. Refusing public distribution."
+            exit 1
+          fi
+          if [[ "$actual" != "${EXPECTED_CERT_SHA256,,}" ]]; then
+            echo "::error::Built APK public certificate differs from Moka's verified private-keystore certificate."
+            echo "APK actual public signer SHA-256: $actual"
+            exit 1
+          fi
+          if "$aapt" dump badging "$apk" | grep -q '^application-debuggable'; then
+            echo "::error::Release APK is debuggable. Refusing distribution."
+            exit 1
+          fi
+          echo "APK signer, release variant and pinned keystore certificate all match."
           cp "$apk" Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk
           sha256sum Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk > SHA256SUMS.txt
           echo "Moka signed APK verified against pinned release certificate." >> "$GITHUB_STEP_SUMMARY"
