@@ -1,0 +1,94 @@
+name: Moka public signing certificate audit
+
+# A one-time public-certificate diagnostic; never uploads keystores or APKs.
+# Only trusted master commits can access signing secrets.
+on:
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/moka-signing-certificate-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.repository == 'yooshastan/MokaMusicPlayer' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Inspect Moka public signing identity without uploading private data
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.MOKA_SIGNING_STORE_B64 }}
+          STORE_PASS: ${{ secrets.MOKA_SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.MOKA_SIGNING_KEY_ALIAS }}
+          PINNED_CERT: ${{ secrets.MOKA_SIGNING_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          if [[ -z "$KEYSTORE_B64" || -z "$STORE_PASS" || -z "$KEY_ALIAS" ]]; then
+            echo "::error::Moka keystore, store password, or alias repository secret is missing."
+            exit 1
+          fi
+
+          store="$RUNNER_TEMP/moka-audit-key"
+          trap 'rm -f "$store"' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$store"
+          [[ -s "$store" ]] || exit 1
+
+          if ! details="$(keytool -list -v -keystore "$store" -alias "$KEY_ALIAS" \
+              -storepass:env STORE_PASS 2>/dev/null)"; then
+            echo "::error::Cannot inspect the configured Moka signing key."
+            exit 1
+          fi
+          if [[ "$details" != *"Entry type: PrivateKeyEntry"* ]]; then
+            echo "::error::The selected alias is not a PrivateKeyEntry."
+            exit 1
+          fi
+          sha="$(printf '%s\n' "$details" | sed -n 's/.*SHA256: *//p' | head -n 1 \
+              | tr -d ':\r[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if [[ ! "$sha" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::Unable to parse SHA-256 of the configured public certificate."
+            exit 1
+          fi
+
+          # Published Moka Beta 6 APK certificate SHA-256, independently extracted
+          # from the APK v2 signing block. This is not the APK's file checksum.
+          old_store_cert="48e894dd6d627a773f08f973f5969f694d8345019d1a48fd774017dec1a2c11d"
+          old_apk_file_hash="e17cd3b8ae8d37bb379b0226f014e40a7eec186bd6842056a9cad835121fa532"
+          echo "MOKA CURRENT KEY PUBLIC CERTIFICATE SHA-256: $sha"
+          echo "OLD UPTODOWN APK SIGNING CERTIFICATE SHA-256: $old_store_cert"
+          {
+            echo "### Moka signing certificate audit"
+            echo ""
+            echo "Current private-keystore PUBLIC certificate SHA-256: \`$sha\`"
+            echo ""
+            echo "Existing Uptodown Beta 6 APK certificate SHA-256: \`$old_store_cert\`"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$details" == *"CN=Android Debug"* ]]; then
+            echo "::warning::The configured private key has an Android Debug certificate. Do not use it as the long-term publisher signing identity."
+            echo "Current certificate is a debug key: do NOT ship as permanent release." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ "$sha" == "$old_store_cert" ]]; then
+            echo "Store-signing comparison: SAME certificate. In-place updates could be possible if key/password and Android conditions hold."
+            echo "Compared with old store signing: SAME certificate." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Store-signing comparison: DIFFERENT certificates. This new key cannot update old Uptodown installs in place without valid Android key rotation; backup/uninstall/reinstall migration may be required."
+            echo "Compared with old store signing: DIFFERENT. No in-place update on ordinary Android installations." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ "${PINNED_CERT,,}" == "$sha" ]]; then
+            echo "Repository pinned certificate: MATCH."
+            echo "Configured certificate pin: MATCH." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Repository pinned certificate: MISMATCH."
+            echo "Configured certificate pin: MISMATCH." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ "${PINNED_CERT,,}" == "$old_apk_file_hash" ]]; then
+            echo "::warning::The configured certificate pin is the old APK FILE checksum, not a signing-certificate fingerprint. Update the pin only after verifying the intended publisher identity."
+          fi
