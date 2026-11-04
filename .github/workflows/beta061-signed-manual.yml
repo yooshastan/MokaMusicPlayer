@@ -90,8 +90,12 @@ jobs:
         shell: bash
         env:
           EXPECTED_CERT_SHA256: ${{ secrets.MOKA_SIGNING_CERT_SHA256 }}
+          MOKA_SIGNING_STORE_PASSWORD: ${{ secrets.MOKA_SIGNING_STORE_PASSWORD }}
+          MOKA_SIGNING_KEY_ALIAS: ${{ secrets.MOKA_SIGNING_KEY_ALIAS }}
+          MOKA_SIGNING_KEY_PASSWORD: ${{ secrets.MOKA_SIGNING_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          chmod +x gradlew
           # Check the actual Gradle release VARIANT, not merely a key in the keystore.
           # Do not show the alias, passwords or keystore path in logs.
           signing_report="$(./gradlew :app:signingReport --console=plain --no-build-cache)"
