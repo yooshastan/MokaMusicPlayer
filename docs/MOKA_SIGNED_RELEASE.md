@@ -2,6 +2,33 @@
 
 The merged Beta 6.1 preview (versionCode 39) was verified with a GitHub Actions **debug** certificate. To produce a stable, upgrade-compatible release APK, use an existing trusted Moka signing key if one exists. **Never replace a signing identity without planning for existing installations.**
 
+## Recommended: configure all five repository secrets from Fedora
+
+The signing workflow reads **GitHub Actions Repository secrets** on
+`yooshastan/MokaMusicPlayer`. It cannot read values from an unrelated
+GitHub Environment, a different repository, or the Variables tab.
+
+From a trusted local clone with `gh` authenticated, run:
+
+```bash
+git fetch origin
+git switch master
+git pull --ff-only
+bash scripts/configure-moka-github-signing.sh
+```
+
+The helper uses an **existing** signing keystore, prompts privately for its
+file path, alias and passwords, and checks its public certificate SHA-256
+fingerprint against the value you enter **before** uploading anything. It
+writes all five secrets directly to the correct repository and prints
+only their names afterward. Never paste its private inputs into chat.
+
+If `gh` reports missing repository access, correct GitHub CLI login
+and permissions; do not work around this by committing credentials.
+
+**Do not generate a new signing key** merely to fix a missing-secret error
+if Uptodown or any existing Moka users depend on the original key.
+
 ## Maintainer's one-time private setup
 
 1. Locate the **existing** Moka signing keystore if you have one. Confirm its certificate fingerprint locally using `keytool -list -v -keystore moka-release.jks -alias YOUR_ALIAS`. If you have never used a persistent release key, generate and back up a new long-lived key privately: `keytool -genkeypair -v -keystore moka-release.jks -alias moka-release -keyalg RSA -keysize 4096 -validity 10000`.
