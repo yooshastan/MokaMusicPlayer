@@ -138,22 +138,33 @@ jobs:
           # The certificate is public. Report the actual APK signer if it differs
           # from the proven private-keystore/Gradle certificate.
           report="$("$signer" verify --verbose --print-certs "$apk")"
-          actual="$(printf '%s\n' "$report" | sed -nE 's/^[[:space:]]*Signer #[0-9]+ certificate SHA-256 digest:[[:space:]]*([0-9a-fA-F:]+)[[:space:]]*$/\1/p' | head -1 | tr -d ':\r[:space:]' | tr '[:upper:]' '[:lower:]')"
-          if [[ ! "$actual" =~ ^[[:xdigit:]]{64}$ ]]; then
-            echo "::error::APK signature verifies, but its SHA-256 certificate line could not be parsed. Check apksigner format; do not alter the pinned key."
-            # Limit the diagnostic to public signer certificate metadata, not passwords.
-            printf '%s\n' "$report" | grep -E 'Signer #[0-9]+ certificate' || true
+          # Android apksigner may describe a signer as either "#1" or
+          # "(minSdkVersion=..., maxSdkVersion=...)" depending on signature scheme.
+          # Every certificate applicable to supported Android versions must match.
+          mapfile -t signer_digests < <(printf '%s\n' "$report" |
+            sed -nE 's/^[[:space:]]*Signer( #[0-9]+| \([^)]*\)) certificate SHA-256 digest:[[:space:]]*([0-9a-fA-F:]+)[[:space:]]*$/\2/p')
+          if (( ${#signer_digests[@]} == 0 )); then
+            echo "::error::APK signature verifies, but no signer certificate SHA-256 could be parsed."
+            # Certificate metadata is public; never dump signing-key or password variables.
+            printf '%s\n' "$report" | grep -E 'Signer.*certificate' || true
             exit 1
           fi
           if [[ "$report" == *"certificate DN: CN=Android Debug"* ]]; then
             echo "::error::Release APK has an Android Debug signing certificate. Refusing public distribution."
             exit 1
           fi
-          if [[ "$actual" != "${EXPECTED_CERT_SHA256,,}" ]]; then
-            echo "::error::Built APK public certificate differs from Moka's verified private-keystore certificate."
-            echo "APK actual public signer SHA-256: $actual"
-            exit 1
-          fi
+          for digest in "${signer_digests[@]}"; do
+            actual="$(printf '%s' "$digest" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+            if [[ ! "$actual" =~ ^[[:xdigit:]]{64}$ ]]; then
+              echo "::error::APK signer certificate digest has an invalid format."
+              exit 1
+            fi
+            if [[ "$actual" != "${EXPECTED_CERT_SHA256,,}" ]]; then
+              echo "::error::Built APK public signer certificate differs from Moka's verified private-keystore certificate."
+              echo "APK actual public signer SHA-256: $actual"
+              exit 1
+            fi
+          done
           if "$aapt" dump badging "$apk" | grep -q '^application-debuggable'; then
             echo "::error::Release APK is debuggable. Refusing distribution."
             exit 1
