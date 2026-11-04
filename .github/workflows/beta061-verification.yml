@@ -37,7 +37,7 @@ jobs:
       - name: Run Kotlin network and duplicate-policy tests, compile APK and Android tests
         run: |
           chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --no-build-cache --stacktrace
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintVitalRelease --no-build-cache --stacktrace
       - name: Verify APK version and prepare artifacts
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
