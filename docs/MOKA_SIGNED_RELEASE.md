@@ -29,6 +29,41 @@ and permissions; do not work around this by committing credentials.
 **Do not generate a new signing key** merely to fix a missing-secret error
 if Uptodown or any existing Moka users depend on the original key.
 
+## Certificate mismatch troubleshooting
+
+A successful Gradle build followed by `Release certificate mismatch. Refusing
+to upload.` means the certificate on the built APK differs from
+`MOKA_SIGNING_CERT_SHA256`. The keystore and alias were sufficient to sign;
+this is **not** an Android compilation error.
+
+The protected workflow now checks the public certificate **before installing
+the Android SDK** and prints the public
+`Public signing certificate SHA-256: ...` digest to the log. This is the
+digest of the signing key stored in `MOKA_SIGNING_STORE_B64`, and is not a
+private key or password.
+
+1. Find the public certificate fingerprint in the preflight log.
+2. Compare that fingerprint to the certificate in a retained, **previously
+   published** Moka APK, using Android SDK `apksigner verify --print-certs
+   previous-moka.apk`. This comparison prevents breaking in-place upgrades.
+3. If the published APK matches the current private keystore, repair only
+   the `MOKA_SIGNING_CERT_SHA256` **repository secret**, using that exact
+   public digest (64 hex characters). If it does not match, restore the original
+   signing keystore instead of changing the pin or disabling verification.
+4. Start a **new** run on `master`. Do not retry older workflow commits.
+
+You can update the certificate pin on your trusted workstation after confirming
+the matching key, without sending the digest or secrets to ChatGPT:
+
+```bash
+gh secret set MOKA_SIGNING_CERT_SHA256 -R yooshastan/MokaMusicPlayer
+# Type/paste the verified 64-character public certificate digest, then Ctrl-D.
+```
+
+This operation does not rekey the application. Never distribute a release signed
+with a certificate different from the already-published APK without planning
+an explicit migration.
+
 ## Maintainer's one-time private setup
 
 1. Locate the **existing** Moka signing keystore if you have one. Confirm its certificate fingerprint locally using `keytool -list -v -keystore moka-release.jks -alias YOUR_ALIAS`. If you have never used a persistent release key, generate and back up a new long-lived key privately: `keytool -genkeypair -v -keystore moka-release.jks -alias moka-release -keyalg RSA -keysize 4096 -validity 10000`.
