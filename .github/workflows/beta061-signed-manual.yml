@@ -81,11 +81,20 @@ jobs:
           # Uptodown Beta 6 APK. Avoid offering an update Android will reject.
           published_cert="48e894dd6d627a773f08f973f5969f694d8345019d1a48fd774017dec1a2c11d"
           if [[ "$actual_cert" != "$published_cert" ]]; then
-            echo "::error::Configured signing key differs from the published Uptodown Moka APK. A new APK would not update existing installs in place. No APK uploaded." >&2
-            exit 1
+            echo "::warning::This release-key signed APK will be for PRIVATE DEVICE TESTING ONLY. Its certificate differs from the original Uptodown Moka APK, so it cannot update those older installs."
+            {
+              echo "### Signing compatibility: PRIVATE TEST ONLY"
+              echo ""
+              echo "The configured signing key matches the repository pin, but NOT the original Uptodown APK."
+              echo "**DO NOT UPLOAD THIS BUILD TO UPTODOWN as an update.**"
+              echo "Only an existing installation signed with this same configured key can be updated in place."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "NOT_COMPATIBLE_WITH_ORIGINAL_UPTODOWN_APK" > STORE_COMPATIBILITY.txt
+          else
+            echo "Signing certificate also matches the existing Uptodown Moka APK."
+            echo "MATCHES_ORIGINAL_UPTODOWN_APK" > STORE_COMPATIBILITY.txt
           fi
           echo "Pinned release signing identity verified against keystore."
-          echo "Signing certificate also matches the existing Uptodown Moka APK."
           echo "MOKA_SIGNING_STORE_FILE=$RUNNER_TEMP/moka-release.jks" >> "$GITHUB_ENV"
       - name: Install Android SDK
         run: |
@@ -190,3 +199,4 @@ jobs:
           path: |
             Moka-Music-Player-4.0.0-beta06.3-navidrome-signed.apk
             SHA256SUMS.txt
+            STORE_COMPATIBILITY.txt
