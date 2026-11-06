@@ -34,7 +34,7 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
                 value = state.server, onValueChange = state::updateServer,
                 enabled = state.client == null, singleLine = true,
                 label = { Text("Navidrome server URL") },
-                placeholder = { Text("https://… or http://10.77.0.1:4533") },
+                placeholder = { Text("https://your-server or http://192.168.1.5:4533") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
@@ -111,8 +111,10 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
             ) { Text("Forget server and saved login") }
             Text(
                 "Wonhee mode: connect the phone to Wonhee VPN first, then enter " +
-                    "http://10.77.0.1:4533. This single private HTTP address is allowed " +
-                    "only over an Android VPN route; it never falls back to Wi-Fi/cellular. " +
+                    "the server's numeric private IP:port (e.g. http://10.0.0.169:4533). " +
+                    "Private HTTP accepts custom RFC1918 IPv4, Tailscale-range IPv4, " +
+                    "and ULA IPv6 addresses only when Android exposes a unique VPN route; otherwise " +
+                    "the connection is blocked without Wi-Fi/cellular fallback. " +
                     "WireGuard encrypts the tunnel but this URL does not use HTTPS. " +
                     "Existing Tailscale HTTPS connections remain supported. " +
                     "Do not expose Navidrome through public port forwarding.",

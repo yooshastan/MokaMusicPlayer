@@ -185,13 +185,27 @@ class SubsonicLibraryClientTest {
     }
 
 
-    @Test fun privateWireGuardEndpointIsTheOnlyAllowedCleartextServer() {
+    @Test fun userConfiguredPrivateVpnHttpAndCustomPortsAreAllowed() {
         assertEquals("http://10.77.0.1:4533",
             SubsonicLibraryClient.validateServerUrl("http://10.77.0.1:4533/rest/"))
+        assertEquals("http://10.0.0.169:4533",
+            SubsonicLibraryClient.validateServerUrl("http://10.0.0.169:4533"))
+        assertEquals("http://192.168.50.4:4040",
+            SubsonicLibraryClient.validateServerUrl("http://192.168.50.4:4040"))
+        assertEquals("http://172.20.1.5:8080",
+            SubsonicLibraryClient.validateServerUrl("http://172.20.1.5:8080"))
+        assertEquals("http://100.90.3.7:4533",
+            SubsonicLibraryClient.validateServerUrl("http://100.90.3.7:4533"))
+        assertEquals("http://[fd00::4]:4533",
+            SubsonicLibraryClient.validateServerUrl("http://[fd00::4]:4533"))
         listOf(
             "http://music.example.org",
-            "http://10.77.0.2:4533",
-            "http://10.77.0.1:4534",
+            "http://1.1.1.1:4533",
+            "http://8.8.8.8:4533",
+            "http://172.32.0.1:4533",
+            "http://192.0.2.5:4533",
+            "http://[2001:db8::1]:4533",
+            "http://192.168.1.1:0",
             "http://10.77.0.1",
             "http://10.77.0.1:4533?x=y",
             "http://10.77.0.1:4533/#fragment",
