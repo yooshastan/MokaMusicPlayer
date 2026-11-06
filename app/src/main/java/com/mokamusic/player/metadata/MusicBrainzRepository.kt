@@ -66,7 +66,8 @@ class MusicBrainzRepository {
             connectTimeout = 12_000
             readTimeout = 20_000
             requestMethod = "GET"
-            instanceFollowRedirects = true
+            // Do not follow redirects outside HTTPS with dynamic private HTTP enabled.
+            instanceFollowRedirects = false
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", USER_AGENT)
         }
