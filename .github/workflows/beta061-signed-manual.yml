@@ -1,4 +1,4 @@
-name: Moka Beta 6.1 persistent-key signed APK (manual)
+name: Moka Beta 6.3 persistent-key signed APK (manual)
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: moka-beta061-manual-sign
+  group: moka-beta063-manual-sign
   cancel-in-progress: false
 
 jobs:
@@ -77,7 +77,15 @@ jobs:
             echo "::error::MOKA_SIGNING_CERT_SHA256 does not match the certificate actually contained in MOKA_SIGNING_STORE_B64. Compare with the already-published Moka APK before selecting an identity. No APK uploaded." >&2
             exit 1
           fi
+          # The public certificate was extracted from the previously published
+          # Uptodown Beta 6 APK. Avoid offering an update Android will reject.
+          published_cert="48e894dd6d627a773f08f973f5969f694d8345019d1a48fd774017dec1a2c11d"
+          if [[ "$actual_cert" != "$published_cert" ]]; then
+            echo "::error::Configured signing key differs from the published Uptodown Moka APK. A new APK would not update existing installs in place. No APK uploaded." >&2
+            exit 1
+          fi
           echo "Pinned release signing identity verified against keystore."
+          echo "Signing certificate also matches the existing Uptodown Moka APK."
           echo "MOKA_SIGNING_STORE_FILE=$RUNNER_TEMP/moka-release.jks" >> "$GITHUB_ENV"
       - name: Install Android SDK
         run: |
@@ -134,7 +142,7 @@ jobs:
           test -s "$apk"
           aapt="$ANDROID_HOME/build-tools/37.0.0/aapt"
           signer="$ANDROID_HOME/build-tools/37.0.0/apksigner"
-          "$aapt" dump badging "$apk" | grep -E "package: name='com.mokamusic.player'.*versionCode='39'.*versionName='4.0.0-beta06.1-wonhee-preview'"
+          "$aapt" dump badging "$apk" | grep -E "package: name='com.mokamusic.player'.*versionCode='41'.*versionName='4.0.0-beta06.3-wonhee-split-preview'"
           # The certificate is public. Report the actual APK signer if it differs
           # from the proven private-keystore/Gradle certificate.
           report="$("$signer" verify --verbose --print-certs "$apk")"
@@ -170,15 +178,15 @@ jobs:
             exit 1
           fi
           echo "APK signer, release variant and pinned keystore certificate all match."
-          cp "$apk" Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk
-          sha256sum Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk > SHA256SUMS.txt
+          cp "$apk" Moka-Music-Player-4.0.0-beta06.3-navidrome-signed.apk
+          sha256sum Moka-Music-Player-4.0.0-beta06.3-navidrome-signed.apk > SHA256SUMS.txt
           echo "Moka signed APK verified against pinned release certificate." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload signed preview (not a public release)
         uses: actions/upload-artifact@v4
         with:
-          name: moka-beta061-persistent-key-signed-apk
+          name: moka-beta063-persistent-key-signed-apk
           if-no-files-found: error
           retention-days: 30
           path: |
-            Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk
+            Moka-Music-Player-4.0.0-beta06.3-navidrome-signed.apk
             SHA256SUMS.txt

@@ -337,7 +337,7 @@ class SubsonicLibraryClient(
             val url = URL(input.trim().trimEnd('/'))
             require(url.protocol.equals("https", true) ||
                 PrivateVpnServerRules.isPrivateWireGuard(url)) {
-                "Use HTTPS or the explicit private WireGuard endpoint http://10.77.0.1:4533."
+                "Use HTTPS for any server, or an explicit private numeric HTTP IP:port over VPN."
             }
             require(url.host.isNotBlank() && url.userInfo == null && url.query == null &&
                 url.ref == null) { "Use a server URL without credentials, query or fragment" }

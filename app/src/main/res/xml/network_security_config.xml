@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Do not weaken HTTPS requirements for any other host. -->
-    <base-config cleartextTrafficPermitted="false" />
-    <!-- Opt-in private WireGuard access. Android route binding is also checked in code. -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.77.0.1</domain>
-    </domain-config>
+    <!-- Dynamic user-configured numeric private IPs cannot be listed as static
+         domain exceptions. Navidrome URL validation, VPN-bound API requests,
+         and playback datasource enforcement MUST reject public HTTP and
+         cleartext bypass; other app network features only request HTTPS. -->
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

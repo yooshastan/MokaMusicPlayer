@@ -51,7 +51,7 @@ internal class MokaRoutingHttpDataSourceFactory(context: Context) : DataSource.F
                 if (!PrivateVpnServerRules.isPrivateWireGuard(uri)) {
                     throw IOException("Insecure HTTP stream is not an approved WireGuard endpoint")
                 }
-                val vpn = PrivateVpnNetworkGate.requireVpnNetwork(context)
+                val vpn = PrivateVpnNetworkGate.requireVpnNetwork(context, uri)
                 val client = OkHttpClient.Builder()
                     .socketFactory(vpn.socketFactory)
                     .proxy(Proxy.NO_PROXY)

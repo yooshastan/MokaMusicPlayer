@@ -2,7 +2,7 @@
 
 **Moka Music Player** is a local-first high-fidelity Android music player built around transparent audio routing, source-rate-aware playback and a native real-time DSP engine.
 
-> **Latest signed preview: [v4.0.0-beta06.1](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06.1)** · Android versionCode **39** · persistent-key signed GitHub prerelease
+> **Latest signed preview: [v4.0.0-beta06.1](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06.1)** · Android versionCode **39** · persistent-key signed GitHub prerelease. A separate **Beta 6.3 configurable-Navidrome test candidate** (versionCode 41) is undergoing CI/device verification, not yet signed or store-published.
 >
 > **[Download the signed Beta 6.1 APK](https://github.com/yooshastan/MokaMusicPlayer/releases/download/v4.0.0-beta06.1/Moka-Music-Player-4.0.0-beta06.1-wonhee-signed.apk)** · [SHA-256 checksum](https://github.com/yooshastan/MokaMusicPlayer/releases/download/v4.0.0-beta06.1/SHA256SUMS.txt) · [Release notes](https://github.com/yooshastan/MokaMusicPlayer/releases/tag/v4.0.0-beta06.1) · [Full changelog](CHANGELOG.md)
 >
@@ -10,11 +10,11 @@
 
 ## Wonhee private Navidrome preview (Beta 6.1)
 
-An opt-in preview supports the tested WireGuard-only Navidrome endpoint `http://10.77.0.1:4533` alongside existing HTTPS/Tailscale login. Android's cleartext exception is limited to that address; Navidrome requests and audio streams are bound to the Android VPN network, and fail closed when no VPN route to that server exists. Saved credentials remain encrypted with Android Keystore, and Original/Lossless remains the default network quality.
+The configurable-Navidrome candidate supports **any HTTPS Navidrome server** and user-entered private numeric HTTP IP/port (RFC1918, 100.64.0.0/10 and ULA IPv6) for verified Android VPN networks. The former single-address HTTP restriction prevented another working Home WireGuard topology from connecting. Private HTTP requests and audio streams are bound to a uniquely selected most-specific Android VPN route and refuse connection if Android does not expose one. No Wi-Fi/cellular HTTP fallback is intentionally provided. Because Android network security domain exceptions are static, this candidate relies on the app's explicit URL validation and network-bound HTTP callers to protect dynamic private hosts; its cleartext base configuration requires device and code security review before distribution. Saved credentials remain encrypted with Android Keystore, and Original/Lossless remains the default network quality.
 
-Requires a working Wonhee VPN profile on the phone **and** a Fedora server listener/forwarder on `10.77.0.1:4533` accessible through `wg0`. The service at `127.0.0.1:4533` alone is not reachable by the phone. Do not expose TCP 4533 to the public internet. For other addresses, keep using HTTPS.
+For HTTP, requires a working Android-recognized VPN with a route to the user-specified numeric private destination; a kernel-only WireGuard interface not exposed as an Android VPN network remains **unsupported and intentionally fail-closed**. A service at `127.0.0.1:4533` alone is not reachable remotely. Do not expose TCP 4533 to the public internet. For all public addresses and hostnames, use HTTPS.
 
-To test: connect Wonhee on the phone, open **Moka → Settings → Network/Navidrome**, enter `http://10.77.0.1:4533`, sign in, test library/FLAC playback, then deliberately disconnect the VPN and confirm private streams fail without bypass. See `docs/WONHEE_PRIVATE_NAVIDROME_TEST.md`. This is a preview; validate on hardware before replacing the Beta 6 release.
+To test Beta 6.3: connect the trusted Android VPN, open **Moka → Settings → Network/Navidrome**, enter your own `http://PRIVATE-IP:PORT` (or an arbitrary HTTPS URL), sign in, test library/FLAC playback, then deliberately disconnect the VPN and confirm private streams fail without bypass. See `docs/MOKA_CUSTOM_NAVIDROME_TEST.md`. This is a preview; validate on hardware before replacing the Beta 6 release.
 
 ## Beta 6 — integrated Android testing
 

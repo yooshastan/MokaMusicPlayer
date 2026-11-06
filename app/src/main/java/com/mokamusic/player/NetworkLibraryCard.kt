@@ -138,9 +138,9 @@ internal class NetworkLibraryState(
         is UnknownHostException -> "Can't resolve the server hostname; check Tailscale or DNS."
         is SSLException -> "HTTPS certificate/connection error."
         is IOException -> if (PrivateVpnServerRules.isPrivateWireGuard(server))
-            "Wonhee VPN route to 10.77.0.1 is unavailable; no direct fallback was used."
+            "Approved private Navidrome VPN route is unavailable; no direct fallback was used."
             else "Network connection failed; check Wi-Fi, cellular or Tailscale."
-        is IllegalArgumentException -> "Use HTTPS or http://10.77.0.1:4533 with Wonhee VPN."
+        is IllegalArgumentException -> "Use HTTPS, or a private numeric HTTP address and port through a verified VPN."
         else -> "Navidrome returned an unexpected API response."
     }
 

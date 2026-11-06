@@ -137,7 +137,9 @@ class ArtworkLoader(private val context: Context) {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 18_000
-            instanceFollowRedirects = true
+            // Global cleartext enablement exists only for explicitly VPN-bound
+            // private Navidrome; unrelated HTTPS artwork must not downgrade.
+            instanceFollowRedirects = false
             requestMethod = "GET"
             setRequestProperty("Accept", "image/*")
             setRequestProperty("User-Agent", "MokaMusicPlayer/4.0.0-beta05")

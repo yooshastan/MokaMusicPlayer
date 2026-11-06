@@ -86,6 +86,7 @@ object AutoEqCatalog {
         val c = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 9_000
             readTimeout = 17_000
+            instanceFollowRedirects = false
             setRequestProperty("User-Agent", "MokaMusicPlayer/4.0")
         }
         try {
@@ -107,6 +108,7 @@ object AutoEqCatalog {
     private fun download(url: String, max: Int): String {
         val c=(URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout=9000; readTimeout=17000
+            instanceFollowRedirects=false
             setRequestProperty("User-Agent","MokaMusicPlayer/4.0")
         }
         try {
