@@ -33,7 +33,7 @@ jobs:
             "platforms;android-37.2" "build-tools;37.0.0" \
             --channel=3 "cmake;3.22.1" "ndk;28.2.13676358"
       - name: Validate Moka signing helper shell syntax
-        run: bash -n scripts/configure-moka-github-signing.sh
+        run: bash -n scripts/configure-moka-github-signing.sh scripts/build-moka-uptodown-local.sh
       - name: Run Kotlin network and duplicate-policy tests, compile APK and Android tests
         run: |
           chmod +x gradlew
