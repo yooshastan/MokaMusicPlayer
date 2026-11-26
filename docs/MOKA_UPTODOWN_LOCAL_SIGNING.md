@@ -27,17 +27,17 @@ If the repository already exists, run `git fetch origin` and `git switch feature
 
 Configure the existing signing key by the repository's ignored `keystore.properties` (see `app/build.gradle.kts`) or use the existing `MOKA_SIGNING_STORE_FILE`, `MOKA_SIGNING_STORE_PASSWORD`, `MOKA_SIGNING_KEY_ALIAS`, `MOKA_SIGNING_KEY_PASSWORD` environment variables. Never put secrets into a Git commit, log, chat, or command line.
 
-The current **4.0.0-beta06.4-route-preflight-preview** has versionCode 42. It is a **diagnostic preview**, not the final Wonhee bridge or an Uptodown-ready update.
+The current **4.0.0-beta06.4-moka-tcp-probe-preview** has versionCode 43. It is a **diagnostic preview**, not the final Wonhee bridge or an Uptodown-ready update.
 
 Sign this preview with your **existing** Moka release key for an in-place phone test:
 
 ```bash
 bash -n scripts/build-moka-uptodown-local.sh
 bash scripts/build-moka-uptodown-local.sh --local-preview
-adb install -r dist/local-test/Moka-Music-Player-4.0.0-beta06.4-route-preflight-preview-v42-local-test-signed.apk
+adb install -r dist/local-test/Moka-Music-Player-4.0.0-beta06.4-moka-tcp-probe-preview-v43-local-test-signed.apk
 ```
 
-The APK and checksum are placed in `dist/local-test/`. It adds an offline route-preflight button in Moka Settings; it **does not** bypass Moka's VPN requirement or provide protected root-only Navidrome traffic.
+The APK and checksum are placed in `dist/local-test/`. It adds an offline VPN-route preflight and one cellular-only, credential-free TCP handshake to the exact lab endpoint 10.0.0.169:4533. The test must be manually triggered while Wonhee's own dual-stack guards and Home UID selector are verified. It sends no HTTP bytes, credentials, or audio and **does not** bypass Moka's VPN requirement or establish leak safety.
 
 For a future completed, device-verified, non-preview build, run:
 
@@ -55,7 +55,7 @@ It performs the following release gates, and refuses to produce an uploadable AP
 4. Runs Android SDK `apksigner verify --verbose --print-certs` on the resulting APK, verifying exactly one matching signing certificate.
 5. Rejects debuggable releases; packages the APK and its SHA-256 checksum in `dist/uptodown/`.
 
-**Current development source is versionCode 42 and remains a test preview.** The default store mode refuses its `preview` versionName. This branch never uploads to Uptodown or receives your private keystore.
+**Current development source is versionCode 43 and remains a test preview.** The default store mode refuses its `preview` versionName. This branch never uploads to Uptodown or receives your private keystore.
 
 ## For Uptodown
 
