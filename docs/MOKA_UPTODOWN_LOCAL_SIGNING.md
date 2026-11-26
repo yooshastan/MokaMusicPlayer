@@ -27,12 +27,25 @@ If the repository already exists, run `git fetch origin` and `git switch feature
 
 Configure the existing signing key by the repository's ignored `keystore.properties` (see `app/build.gradle.kts`) or use the existing `MOKA_SIGNING_STORE_FILE`, `MOKA_SIGNING_STORE_PASSWORD`, `MOKA_SIGNING_KEY_ALIAS`, `MOKA_SIGNING_KEY_PASSWORD` environment variables. Never put secrets into a Git commit, log, chat, or command line.
 
-The local release helper is designed to run **after** the new Moka code is ready and `versionCode` has been increased to at least 42.
+The current **4.0.0-beta06.4-route-preflight-preview** has versionCode 42. It is a **diagnostic preview**, not the final Wonhee bridge or an Uptodown-ready update.
+
+Sign this preview with your **existing** Moka release key for an in-place phone test:
 
 ```bash
 bash -n scripts/build-moka-uptodown-local.sh
+bash scripts/build-moka-uptodown-local.sh --local-preview
+adb install -r dist/local-test/Moka-Music-Player-4.0.0-beta06.4-route-preflight-preview-v42-local-test-signed.apk
+```
+
+The APK and checksum are placed in `dist/local-test/`. It adds an offline route-preflight button in Moka Settings; it **does not** bypass Moka's VPN requirement or provide protected root-only Navidrome traffic.
+
+For a future completed, device-verified, non-preview build, run:
+
+```bash
 bash scripts/build-moka-uptodown-local.sh
 ```
+
+The default store mode **refuses** version names containing `preview`. Only a completed release candidate can produce an Uptodown submission file.
 
 It performs the following release gates, and refuses to produce an uploadable APK on any failure:
 
@@ -42,7 +55,7 @@ It performs the following release gates, and refuses to produce an uploadable AP
 4. Runs Android SDK `apksigner verify --verbose --print-certs` on the resulting APK, verifying exactly one matching signing certificate.
 5. Rejects debuggable releases; packages the APK and its SHA-256 checksum in `dist/uptodown/`.
 
-**Current Beta 6.3 source remains versionCode 41.** The helper is expected to refuse until the actual compatibility release has been implemented, tested and version-bumped. This branch does not publish an APK or access your private keystore.
+**Current development source is versionCode 42 and remains a test preview.** The default store mode refuses its `preview` versionName. This branch never uploads to Uptodown or receives your private keystore.
 
 ## For Uptodown
 
