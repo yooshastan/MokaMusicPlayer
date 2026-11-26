@@ -55,6 +55,27 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
             routeCheck?.let { message ->
                 Text(message, style = MaterialTheme.typography.bodySmall)
             }
+            Text(
+                "Wonhee RootLab diagnostics: this test sends ONE TCP handshake " +
+                    "from Moka itself to http://10.0.0.169:4533, without HTTP " +
+                    "data, authentication, or audio. It requires cellular with " +
+                    "Wi-Fi disconnected and Android Private DNS OFF. " +
+                    "Run it ONLY while Wonhee's exact-owned Moka dual-stack " +
+                    "guards, Home fallback, and UID selector are verified. " +
+                    "A successful connection does NOT establish no-fallback safety.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = state::probePrivateHomeTcpOnce,
+                enabled = !state.tcpProbeBusy && state.server.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (state.tcpProbeBusy) "Testing TCP handshake…" else
+                    "Test Moka TCP route (no login)")
+            }
+            state.tcpProbeStatus?.let { message ->
+                Text(message, style = MaterialTheme.typography.bodySmall)
+            }
             OutlinedTextField(
                 value = state.username, onValueChange = state::updateUsername,
                 enabled = state.client == null, singleLine = true,
