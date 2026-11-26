@@ -75,7 +75,9 @@ internal object PrivateNavidromeTcpProbe {
         ) == "off"
         val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val active = cm?.activeNetwork
-        val capabilities = active?.let { cm.getNetworkCapabilities(it) }
+        val capabilities = if (cm != null && active != null) {
+            cm.getNetworkCapabilities(active)
+        } else null
         val cellular = capabilities != null &&
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
             !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
