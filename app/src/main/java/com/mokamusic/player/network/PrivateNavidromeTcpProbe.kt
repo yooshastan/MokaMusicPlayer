@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
-import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
@@ -37,7 +36,7 @@ internal object PrivateNavidromeTcpProbe {
         if (url.userInfo != null || url.query != null || url.ref != null) return null
         if (!url.protocol.equals("http", ignoreCase = true)
             || url.host != LAB_HOST || url.port != LAB_PORT
-            || url.path.trim('/') .isNotEmpty()) return null
+            || url.path.trim('/').isNotEmpty()) return null
         val address = PrivateVpnServerRules.privateNumericAddress(url.host) ?: return null
         if (address.address.size != 4) return null
         return InetSocketAddress(address, url.port)
@@ -77,7 +76,8 @@ internal object PrivateNavidromeTcpProbe {
         val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val active = cm?.activeNetwork
         val capabilities = active?.let { cm.getNetworkCapabilities(it) }
-        val cellular = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true &&
+        val cellular = capabilities != null &&
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
             !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
             !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
 
