@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import com.mokamusic.player.network.PrivateNavidromeRoutePreflight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -15,6 +17,9 @@ import com.mokamusic.player.network.NetworkStreamQuality
 @Composable
 internal fun NetworkAccountSettings(state: NetworkLibraryState) {
     LaunchedEffect(state) { state.onScreenOpened() }
+    val context = LocalContext.current
+    var routeCheck by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.server) { routeCheck = null }
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(18.dp),
@@ -37,6 +42,40 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
                 placeholder = { Text("https://your-server or http://192.168.1.5:4533") },
                 modifier = Modifier.fillMaxWidth()
             )
+            OutlinedButton(
+                onClick = {
+                    // No network I/O: only inspect Android's current route inventory.
+                    routeCheck = PrivateNavidromeRoutePreflight
+                        .inspect(context, state.server).description
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Check protected Navidrome route (offline)")
+            }
+            routeCheck?.let { message ->
+                Text(message, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                "Wonhee RootLab diagnostics: this test sends ONE TCP handshake " +
+                    "from Moka itself to http://10.0.0.169:4533, without HTTP " +
+                    "data, authentication, or audio. It requires cellular with " +
+                    "Wi-Fi disconnected and Android Private DNS OFF. " +
+                    "Run it ONLY while Wonhee's exact-owned Moka dual-stack " +
+                    "guards, Home fallback, and UID selector are verified. " +
+                    "A successful connection does NOT establish no-fallback safety.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = state::probePrivateHomeTcpOnce,
+                enabled = !state.tcpProbeBusy && state.server.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (state.tcpProbeBusy) "Testing TCP handshake…" else
+                    "Test Moka TCP route (no login)")
+            }
+            state.tcpProbeStatus?.let { message ->
+                Text(message, style = MaterialTheme.typography.bodySmall)
+            }
             OutlinedTextField(
                 value = state.username, onValueChange = state::updateUsername,
                 enabled = state.client == null, singleLine = true,
@@ -110,7 +149,9 @@ internal fun NetworkAccountSettings(state: NetworkLibraryState) {
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Forget server and saved login") }
             Text(
-                "Wonhee mode: connect the phone to Wonhee VPN first, then enter " +
+                "Wonhee mode: Moka currently requires an Android-recognized VPN route " +
+                    "for private HTTP, not just a root-managed WireGuard interface. " +
+                    "Enter " +
                     "the server's numeric private IP:port (e.g. http://10.0.0.169:4533). " +
                     "Private HTTP accepts custom RFC1918 IPv4, Tailscale-range IPv4, " +
                     "and ULA IPv6 addresses only when Android exposes a unique VPN route; otherwise " +

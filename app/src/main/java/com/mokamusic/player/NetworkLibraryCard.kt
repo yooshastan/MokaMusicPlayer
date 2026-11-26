@@ -27,6 +27,7 @@ import com.mokamusic.player.network.NetworkSong
 import com.mokamusic.player.network.NetworkStreamQuality
 import com.mokamusic.player.network.PrivateVpnNetworkGate
 import com.mokamusic.player.network.PrivateVpnServerRules
+import com.mokamusic.player.network.PrivateNavidromeTcpProbe
 import com.mokamusic.player.network.SubsonicLibraryClient
 import com.mokamusic.player.network.SubsonicHttpException
 import java.io.IOException
@@ -115,6 +116,10 @@ internal class NetworkLibraryState(
         private set
     var streamCheckStatus by mutableStateOf<String?>(null)
         private set
+    var tcpProbeBusy by mutableStateOf(false)
+        private set
+    var tcpProbeStatus by mutableStateOf<String?>(null)
+        private set
     var playbackStatus by mutableStateOf<String?>(null)
     var status by mutableStateOf<String?>(null)
         private set
@@ -152,6 +157,7 @@ internal class NetworkLibraryState(
     fun updateServer(value: String) {
         server = value
         prefs.edit().putString("server_url", value).apply()
+        tcpProbeStatus = null
     }
 
     fun updateUsername(value: String) {
@@ -170,6 +176,32 @@ internal class NetworkLibraryState(
         rememberLogin = value
         prefs.edit().putBoolean("remember_login", value).apply()
         if (!value) clearSavedLogin()
+    }
+
+    /**
+     * One diagnostic TCP handshake from Moka's real UID, no Subsonic login,
+     * HTTP bytes, token, playback or VPN-gate bypass. Wonhee counters must
+     * independently verify the observed route and rejection behavior.
+     */
+    fun probePrivateHomeTcpOnce() {
+        if (tcpProbeBusy) return
+        tcpProbeBusy = true
+        tcpProbeStatus = "Testing credential-free TCP handshake…"
+        val target = server
+        appScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    PrivateNavidromeTcpProbe.runOnce(appContext, target)
+                }
+                tcpProbeStatus = result.description
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                tcpProbeStatus = PrivateNavidromeTcpProbe.Result.TCP_ERROR.description
+            } finally {
+                tcpProbeBusy = false
+            }
+        }
     }
 
     fun onScreenOpened() {
@@ -607,6 +639,7 @@ internal class NetworkLibraryState(
         client = null
         password = ""
         streamCheckStatus = null
+        tcpProbeStatus = null
         playbackStatus = null
         selectedAlbum = null
         albums = emptyList()
