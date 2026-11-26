@@ -10,6 +10,15 @@ repo_root="$(cd -- "$(dirname -- "$0")/.." && pwd -P)"
 cd "$repo_root"
 fail() { printf 'REFUSED: %s\n' "$*" >&2; exit 1; }
 
+mode="uptodown"
+case "${1:-}" in
+  "") ;;
+  "--local-preview") mode="local-test" ;;
+  *) fail 'Usage: bash scripts/build-moka-uptodown-local.sh [--local-preview]' ;;
+esac
+(( $# <= 1 )) || fail 'Unexpected additional arguments.'
+
+
 # Public certificate from uploaded Moka 4.0.0-beta06.3, versionCode 41.
 # The APK's origin on Uptodown must still be independently confirmed.
 required_cert='b61f5999305f84d71b696bdd7ee7eb0e5fdff40d241d8a729f0a98de4ecef0b4'
@@ -65,6 +74,10 @@ version="$(printf '%s\n' "$package_line" | sed -n "s/.*versionName='\([A-Za-z0-9
   fail 'Cannot parse package version safely.'
 (( code > baseline_code )) ||
   fail "versionCode $code must exceed the Beta 6.3 baseline ($baseline_code)."
+if [[ "$mode" == "uptodown" && "$version" == *preview* ]]; then
+  fail 'Preview builds are NOT Uptodown-ready. Use --local-preview for a signed device-test APK.'
+fi
+
 
 signature_report="$("$apksigner" verify --verbose --print-certs "$apk")" ||
   fail 'APK signature verification failed.'
@@ -78,11 +91,15 @@ actual="$(printf '%s' "$cert_rows" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
 if "$aapt" dump badging "$apk" | grep -q '^application-debuggable'; then
   fail 'Debuggable APK must not be distributed to Uptodown.'
 fi
-dist="$repo_root/dist/uptodown"
+dist="$repo_root/dist/$mode"
 mkdir -p "$dist"
-name="Moka-Music-Player-$version-v$code-uptodown-signed.apk"
+name="Moka-Music-Player-$version-v$code-$mode-signed.apk"
 cp "$apk" "$dist/$name"
 ( cd "$dist" && sha256sum "$name" > "$name.sha256" )
 printf '\nSIGNED LOCAL APK VERIFIED\nPackage: com.mokamusic.player\nVersion: %s (code %s)\nSigner SHA-256: %s\nAPK: %s\nChecksum: %s\n' \
   "$version" "$code" "$actual" "$dist/$name" "$dist/$name.sha256"
-printf '\nBefore submitting as an update, verify the uploaded Beta 6.3 APK was downloaded from the current Uptodown listing.\n'
+if [[ "$mode" == "local-test" ]]; then
+  printf '\nLOCAL TEST ONLY. Do not submit this preview APK to Uptodown.\n'
+else
+  printf '\nBefore submitting as an update, verify the Beta 6.3 APK was downloaded from the current Uptodown listing and all release acceptance tests passed.\n'
+fi
