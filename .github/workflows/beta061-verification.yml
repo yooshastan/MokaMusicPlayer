@@ -50,7 +50,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moka-beta063-configurable-navidrome-debug
+          name: moka-beta064-route-preflight-debug
           if-no-files-found: warn
           path: |
             Moka-Music-Player-4.0.0-beta06.4-route-preflight-debug.apk
